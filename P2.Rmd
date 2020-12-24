@@ -1,0 +1,279 @@
+---
+title: "Data Analysis Skill Test Part 2"
+author: "Gilberto Alcântara"
+date: "24/12/2020"
+output:
+  html_document: default
+  pdf_document: default
+---
+```{r setup, include=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(lubridate)
+library(forecast)
+
+```
+
+```{r warning=FALSE}
+dados = read.csv("/home/Gilberto/Documentos/Cluster/Challenge_4i/data_comexstat.csv",header = T)
+```
+
+\quad Vamos mostrar a evolução mensal e anual de cada um dos produtos exportados separadamente, começando pela soja:
+
+```{r warning=FALSE}
+soybeans_export = subset(dados,dados$product=="soybeans" & dados$type=="Export")
+mes = month(ymd(soybeans_export$date))
+ano = year(ymd(soybeans_export$date))
+soybeans_export = cbind(soybeans_export, mes, ano)
+a = soybeans_export %>% 
+  group_by(yr = year(date), mon = month(date)) %>% 
+  summarise(mn_amt = sum(tons))
+dates = seq(as.Date("01-01-1997",  format = "%d-%m-%Y"), length.out = 276, by = "month")
+df <- data.frame(dates, a$mn_amt) 
+ggplot(df, aes(dates, a.mn_amt)) + geom_line() + scale_x_date(date_labels = "%b-%Y")+
+  labs(x = "Mês", y = "Toneladas")+
+  ggtitle("Total de toneladas exportadas de soja mensal") +
+  theme(plot.title = element_text(hjust = 0.5))
+tt_ano = aggregate(soybeans_export$tons, by=list(Category=soybeans_export$ano), FUN=sum)
+ggplot(tt_ano, aes(x=Category, y=x)) +
+  geom_line()+
+  labs(x = "Ano", y = "Toneladas")+
+  ggtitle("Total de toneladas exportadas de soja por ano") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+```{r warning=FALSE}
+soybean_oil_export = subset(dados,dados$product=="soybean_oil" & dados$type=="Export")
+mes = month(ymd(soybean_oil_export$date))
+ano = year(ymd(soybean_oil_export$date))
+soybean_oil_export = cbind(soybean_oil_export, mes, ano)
+a = soybean_oil_export %>% 
+  group_by(yr = year(date), mon = month(date)) %>% 
+  summarise(mn_amt = sum(tons))
+dates = seq(as.Date("01-01-1997",  format = "%d-%m-%Y"), length.out = 276, by = "month")
+df <- data.frame(dates, a$mn_amt) 
+ggplot(df, aes(dates, a.mn_amt)) + geom_line() + scale_x_date(date_labels = "%b-%Y")+
+  labs(x = "Mês", y = "Toneladas")+
+  ggtitle("Total de toneladas exportadas de óleo de soja mensal") +
+  theme(plot.title = element_text(hjust = 0.5))
+tt_ano = aggregate(soybean_oil_export$tons, by=list(Category=soybean_oil_export$ano), FUN=sum)
+ggplot(tt_ano, aes(x=Category, y=x)) +
+  geom_line()+
+  labs(x = "Ano", y = "Toneladas")+
+  ggtitle("Total de toneladas exportadas de óleo de soja por ano") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+```{r warning=FALSE}
+soybean_meal_export = subset(dados,dados$product=="soybean_meal" & dados$type=="Export")
+mes = month(ymd(soybean_meal_export$date))
+ano = year(ymd(soybean_meal_export$date))
+soybean_meal_export = cbind(soybean_meal_export, mes, ano)
+a = soybean_meal_export %>% 
+  group_by(yr = year(date), mon = month(date)) %>% 
+  summarise(mn_amt = sum(tons))
+dates = seq(as.Date("01-01-1997",  format = "%d-%m-%Y"), length.out = 276, by = "month")
+df <- data.frame(dates, a$mn_amt) 
+ggplot(df, aes(dates, a.mn_amt)) + geom_line() + scale_x_date(date_labels = "%b-%Y")+
+  labs(x = "Mês", y = "Toneladas")+
+  ggtitle("Total de toneladas exportadas de farinha de soja mensal") +
+  theme(plot.title = element_text(hjust = 0.5))
+tt_ano = aggregate(soybean_meal_export$tons, by=list(Category=soybean_meal_export$ano), FUN=sum)
+ggplot(tt_ano, aes(x=Category, y=x)) +
+  geom_line()+
+  labs(x = "Ano", y = "Toneladas")+
+  ggtitle("Total de toneladas exportadas de farinha de soja por ano") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+\quad Conforme os gráficos nos mostram, parece haver uma sazionalidade na exportação mensal, os primeiros e os ultimos meses do ano são os meses com menor exportação dos produtos, e os picos de exportação acontecem no meio do ano. Quanto as exportações anuais, cada produto parece ter um comportamento em série diferente. A exportação da soja crescia a cada ano, atingindo seu pico em 2018, porém em 2019 ela apresentou uma tendência de queda no total de exportações. Já o óleo de soja teve um crescimento até 2005, onde atingiu seu pico máximo nos anos registrados e depois houve uma queda brusca no total de toneladas exportadas do produto. A exportação de farinha de soja segue em crescimento.
+
+\quad Para responder quais os três principais produtos exportados pelo Brasil nos últimos 5 anos vamos analisar a quantidade total de toneladas exportadas pelos produtos, isto é, os produtos com mais toneladas exportadas é o produto principal.
+
+```{r warning=FALSE}
+exported = subset(dados,dados$type=="Export")
+ano = year(ymd(exported$date))
+exported = cbind(exported,ano)
+tt_last5 = exported[ which(exported$ano >= 2015), ]
+tt_last5 = aggregate(tt_last5$tons, by=list(tt_last5$product), FUN=sum)
+colnames(tt_last5) = c("Produto", "Total Toneladas")
+tt_last5[order(-tt_last5$`Total Toneladas`),]
+```
+
+\quad Conforme podemos observar os 3 produtos mais exportados nos últimos 5 anos foram: soja, milho e açucar, respectivamente.
+
+\quad Somando os totais exportados em cada rota nos últimos anos, as 3 principais rotas de exportações foram:
+
+```{r warning=FALSE}
+corn_data = subset(dados,dados$product=="corn" & dados$type=="Export")
+corn_tt = aggregate(corn_data$tons, by=list(corn_data$route), FUN=sum)
+colnames(corn_tt) = c("Rota","Total toneladas")
+corn_tt[order(-corn_tt$`Total toneladas`),][1:3,]
+```
+
+\quad Abaixo podemos os gráficos da quantidade total exportada por tonelada de cada produto em cada rota.
+
+```{r warning=FALSE}
+Air_data = subset(dados, dados$route == "Air")
+Ground_data = subset(dados, dados$route == "Ground")
+Other_data = subset(dados, dados$route == "Other")
+River_data = subset(dados, dados$route == "River")
+Sea_data = subset(dados, dados$route == "Sea")
+tt_Air = aggregate(Air_data$tons, by=list(Air_data$product), FUN=sum)
+tt_Ground = aggregate(Ground_data$tons, by=list(Ground_data$product), FUN=sum)
+tt_Other = aggregate(Other_data$tons, by=list(Other_data$product), FUN=sum)
+tt_River = aggregate(River_data$tons, by=list(River_data$product), FUN=sum)
+tt_Sea = aggregate(Sea_data$tons, by=list(Sea_data$product), FUN=sum)
+colnames(tt_Air) = c("Produto","Total toneladas")
+ggplot(tt_Air, aes(x=Produto, y=`Total toneladas`, fill=Produto)) +
+  geom_bar(stat="identity")+theme_minimal()+
+  ggtitle("Total de toneladas de produtos exportados por rotas aéreas") +
+  theme(plot.title = element_text(hjust = 0.5))
+colnames(tt_Ground) = c("Produto","Total toneladas")
+ggplot(tt_Ground, aes(x=Produto, y=`Total toneladas`, fill=Produto)) +
+  geom_bar(stat="identity")+theme_minimal()+
+  ggtitle("Total de toneladas de produtos exportados por rotas terrestres") +
+  theme(plot.title = element_text(hjust = 0.5))
+colnames(tt_Other) = c("Produto","Total toneladas")
+ggplot(tt_Other, aes(x=Produto, y=`Total toneladas`, fill=Produto)) +
+  geom_bar(stat="identity")+theme_minimal()+
+  ggtitle("Total de toneladas de produtos exportados por outras rotas") +
+  theme(plot.title = element_text(hjust = 0.5))
+colnames(tt_River) = c("Produto","Total toneladas")
+ggplot(tt_River, aes(x=Produto, y=`Total toneladas`, fill=Produto)) +
+  geom_bar(stat="identity")+theme_minimal()+
+  ggtitle("Total de toneladas de produtos exportados por rotas fluviais") +
+  theme(plot.title = element_text(hjust = 0.5))
+colnames(tt_Sea) = c("Produto","Total toneladas")
+ggplot(tt_Sea, aes(x=Produto, y=`Total toneladas`, fill=Produto)) +
+  geom_bar(stat="identity")+theme_minimal()+
+  ggtitle("Total de toneladas de produtos exportados por rotas oceanicas") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+\quad Podemos notar que existem diferenças entre o principal produto exportado por cada rota. Nas rotas áreas o principal produto exportado é a farinha de soja, sendo o trigo pouquissímo exportado por essa rota. Já por vias terrestres o milho é o principal produto de exportação. Nas demais rotas (fluviais, oceânicas e outras) o principal produto exportado é o açucar e o trigo o menor exportado.
+
+\quad Os paises que mais exportaram e importaram açucar do Brasil nos últimos 3 anos, respectivamente, foram:
+
+```{r warning=FALSE}
+sugar_data = subset(dados,dados$product == "sugar")
+ano = year(ymd(sugar_data$date))
+sugar_data = cbind(sugar_data,ano)
+sugar_last3 = sugar_data[ which(sugar_data$ano >= 2017), ]
+sugar_tt = aggregate(sugar_last3$tons, by=list(sugar_last3$country,sugar_last3$type), FUN=sum)
+colnames(sugar_tt) = c("Pais","Tipo","Total_Toneladas")
+sugar_tt1 = subset(sugar_tt, sugar_tt$Tipo=="Export")
+sugar_tt1[order(-sugar_tt1$Total_Toneladas),][1,]
+sugar_tt2 = subset(sugar_tt, sugar_tt$Tipo=="Import")
+sugar_tt2[order(-sugar_tt2$Total_Toneladas),][1,]
+```
+
+\quad Os paises que mais exportaram e importaram milho do Brasil nos últimos 3 anos, respectivamente, foram:
+
+```{r warning=FALSE}
+corn_data = subset(dados,dados$product=="corn")
+ano = year(ymd(corn_data$date))
+corn_data = cbind(corn_data,ano)
+corn_last3 = corn_data[ which(corn_data$ano >= 2017), ]
+corn_tt = aggregate(corn_last3$tons, by=list(corn_last3$country,corn_last3$type), FUN=sum)
+colnames(corn_tt) = c("Pais","Tipo","Total_Toneladas")
+corn_tt1 = subset(corn_tt, corn_tt$Tipo=="Export")
+corn_tt1[order(-corn_tt1$Total_Toneladas),][1,]
+corn_tt2 = subset(corn_tt, corn_tt$Tipo=="Import")
+corn_tt2[order(-corn_tt2$Total_Toneladas),][1,]
+```
+
+\quad Os 5 principais estados exportadores de açucar foram:
+
+```{r warning=FALSE}
+sugar_export = subset(dados, dados$product=="sugar" & dados$type=="Export")
+sugar_export = aggregate(sugar_export$tons, by=list(sugar_export$state), FUN=sum)
+sugar_export[order(-sugar_export$x),][1:5,]
+```
+
+\quad Os 5 principais estados exportadores de farinha de soja foram:
+
+```{r warning=FALSE}
+soybean_meal_export = subset(dados, dados$product=="soybean_meal" & dados$type=="Export")
+soybean_meal_export = aggregate(soybean_meal_export$tons, by=list(soybean_meal_export$state), FUN=sum)
+soybean_meal_export[order(-soybean_meal_export$x),][1:5,]
+```
+
+\quad Os 5 principais estados exportadores de óleo de soja foram::
+
+```{r warning=FALSE}
+soybean_oil_export = subset(dados, dados$product=="soybean_oil" & dados$type=="Export")
+soybean_oil_export = aggregate(soybean_oil_export$tons, by=list(soybean_oil_export$state), FUN=sum)
+soybean_oil_export[order(-soybean_oil_export$x),][1:5,]
+```
+
+\quad Os 5 principais estados exportadores de soja foram:
+
+```{r warning=FALSE}
+soybeans_export = subset(dados, dados$product=="soybeans" & dados$type=="Export")
+soybeans_export = aggregate(soybeans_export$tons, by=list(soybeans_export$state), FUN=sum)
+soybeans_export[order(-soybeans_export$x),][1:5,]
+
+```
+
+\quad Os 5 principais estados exportadores de milho foram:
+
+```{r warning=FALSE}
+corn_export = subset(dados, dados$product=="corn" & dados$type=="Export")
+corn_export = aggregate(corn_export$tons, by=list(corn_export$state), FUN=sum)
+corn_export[order(-corn_export$x),][1:5,]
+
+```
+
+
+\quad Os 5 principais estados exportadores de trigo foram:
+
+```{r warning=FALSE}
+wheat_export = subset(dados, dados$product=="wheat" & dados$type=="Export")
+wheat_export = aggregate(wheat_export$tons, by=list(wheat_export$state), FUN=sum)
+wheat_export[order(-wheat_export$x),][1:5,]
+
+```
+
+\quad Como os dados são de uma série temporal, a melhor forma de prever os totais anuais é somar os totais de exportações por ano e buscar ajustar um modelo Arima para previsão do total de exportações dos produtos nos próximos 11 anos. Ressalta-se que a quantidade de anos é baixa, e uso de um modelo de séries temporais para previsão não é a melhor alternativa.
+
+\quad As previsões dos totais de exportações em toneladas de soja para os próximos 11 anos são:
+
+```{r warning=FALSE}
+soybeans_export = subset(dados,dados$product=="soybeans" & dados$type=="Export")
+mes = month(ymd(soybeans_export$date))
+ano = year(ymd(soybeans_export$date))
+soybeans_export = cbind(soybeans_export, mes, ano)
+tt_ano = aggregate(soybeans_export$tons, by=list(Category=soybeans_export$ano), FUN=sum)
+Mod_Ano = auto.arima(ts(tt_ano$x,start=1997))
+Mod_Prev = forecast(Mod_Ano,h=11)
+Mod_Prev$mean
+
+```
+
+\quad As previsões dos totais de exportações em toneladas de farinha de soja para os próximos 11 anos são:
+
+```{r warning=FALSE}
+
+soybean_meal_export = subset(dados,dados$product=="soybean_meal" & dados$type=="Export")
+mes = month(ymd(soybean_meal_export$date))
+ano = year(ymd(soybean_meal_export$date))
+soybean_meal_export = cbind(soybean_meal_export, mes, ano)
+tt_ano = aggregate(soybean_meal_export$tons, by=list(Category=soybean_meal_export$ano), FUN=sum)
+Mod_Ano = auto.arima(ts(tt_ano$x,start=1997))
+Mod_Prev = forecast(Mod_Ano,h=11)
+Mod_Prev$mean
+```
+
+\quad As previsões dos totais de exportações em toneladas de milho para os próximos 11 anos são:
+
+```{r warning=FALSE}
+corn_export = subset(dados,dados$product=="corn" & dados$type=="Export")
+mes = month(ymd(corn_export$date))
+ano = year(ymd(corn_export$date))
+corn_export = cbind(corn_export, mes, ano)
+tt_ano = aggregate(corn_export$tons, by=list(Category=corn_export$ano), FUN=sum)
+Mod_Ano = auto.arima(ts(tt_ano$x,start=1997))
+Mod_Prev = forecast(Mod_Ano,h=11)
+Mod_Prev$mean
+
+```
